@@ -28,7 +28,7 @@ public class EmployeeService {
     @Transactional
     public Employee update(Long id, Employee employee) {
         if (!employeeRepository.existsById(id))
-            throw new IllegalArgumentException("Id '" + id + "' not found");
+            return null;
         employee.setId(id);
         return employeeRepository.save(employee);
     }
