@@ -4,7 +4,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 
 import java.util.List;
 import java.util.Optional;
@@ -15,10 +17,14 @@ import static org.mockito.Mockito.*;
 @SpringBootTest
 class EmployeeServiceIntegrationTest {
 
-    @InjectMocks
+    // you can use either '@Autowired + @MockBean' or '@InjectMocks + @Mock'
+
+//    @InjectMocks
+    @Autowired
     private EmployeeService employeeService;
 
-    @Mock
+//    @Mock
+    @MockBean
     private EmployeeRepository employeeRepository;
 
     private List<Employee> employees;

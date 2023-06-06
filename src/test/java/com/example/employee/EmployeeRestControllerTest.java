@@ -10,9 +10,9 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 
-import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.hamcrest.Matchers.*;
 
@@ -31,8 +31,7 @@ class EmployeeRestControllerTest {
 
     @BeforeEach
     public void initEach() {
-        employee = new Employee("test employee", 99);
-        employee = employeeService.create(employee);
+        employee = employeeService.create(new Employee("test employee", 99));
     }
 
     @Test
@@ -71,19 +70,15 @@ class EmployeeRestControllerTest {
         mvc.perform(post("/api/employees")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json))
-//                        .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isAccepted())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.name", is(employeeForPosting.getName())))
                 .andExpect(jsonPath("$.age", is(employeeForPosting.getAge())));
 
-        // GET
-        mvc.perform(get("/api/employees")
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$[1].name", is(employeeForPosting.getName())))
-                .andExpect(jsonPath("$[1].age", is(employeeForPosting.getAge())));
+        assertTrue(employeeService.findAll()
+                .stream()
+                .anyMatch(e -> e.getName().equals(employeeForPosting.getName())
+                            && e.getAge().equals(employeeForPosting.getAge())));
     }
 
     @Test
@@ -97,37 +92,26 @@ class EmployeeRestControllerTest {
         mvc.perform(put("/api/employees/{id}", employee.getId())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json))
-//                        .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isAccepted())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.name", is(employee.getName())))
                 .andExpect(jsonPath("$.age", is(employee.getAge())));
 
-        // GET
-        mvc.perform(get("/api/employees")
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$[0].name", is(employee.getName())))
-                .andExpect(jsonPath("$[0].age", is(employee.getAge())));
+        var employeeFound = employeeService.findById(employee.getId());
+        assertEquals(employee.getName(), employeeFound.getName());
+        assertEquals(employee.getAge(), employeeFound.getAge());
     }
 
     @Test
     void testDeleteById() throws Exception {
 
-        // GET
-        mvc.perform(get("/api/employees/{id}", employee.getId())
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk());
+        assertNotNull(employeeService.findById(employee.getId()));
 
         // DELETE
         mvc.perform(delete("/api/employees/{id}", employee.getId())
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
 
-        // GET
-        mvc.perform(get("/api/employees/{id}", employee.getId())
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isNotFound());
+        assertNull(employeeService.findById(employee.getId()));
     }
 }

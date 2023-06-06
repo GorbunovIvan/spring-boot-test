@@ -42,7 +42,7 @@ public class EmployeeRestController {
         if (employeePersisted == null)
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
 
-        return new ResponseEntity<>(employee, HttpStatus.ACCEPTED);
+        return new ResponseEntity<>(employeePersisted, HttpStatus.ACCEPTED);
     }
 
     @DeleteMapping("/{id}")
