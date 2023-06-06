@@ -32,7 +32,7 @@ class EmployeeRestControllerTest {
     @BeforeEach
     public void initEach() {
         employee = new Employee("test employee", 99);
-        employeeService.create(employee);
+        employee = employeeService.create(employee);
     }
 
     @Test
