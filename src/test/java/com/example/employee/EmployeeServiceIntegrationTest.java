@@ -2,75 +2,84 @@ package com.example.employee;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.context.annotation.Bean;
 
 import java.util.List;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.*;
 
-//@SpringBootTest
+@SpringBootTest
 class EmployeeServiceIntegrationTest {
 
-//    @TestConfiguration
-//    static class EmployeeServiceIntegrationTestContextConfiguration {
-//        @Bean
-//        public EmployeeService employeeService() {
-//            return new EmployeeService(null);
-//        }
-//    }
-
-//    @Autowired
+    @InjectMocks
     private EmployeeService employeeService;
 
-//    @MockBean
+    @Mock
     private EmployeeRepository employeeRepository;
 
-//    @BeforeEach
+    private List<Employee> employees;
+
+    @BeforeEach
     public void setUp() {
-
-        var employees = List.of(
-                new Employee("test employee", 99),
-                new Employee("another test employee", 22),
-                new Employee("one more test employee", 44)
+        employees = List.of(
+                new Employee(1L, "test employee", 99),
+                new Employee(2L, "another test employee", 22),
+                new Employee(3L, "one more test employee", 44)
         );
-
-        Mockito.when(employeeRepository.findAll()).thenReturn(employees);
-        Mockito.when(employeeRepository.existsById(anyLong())).thenReturn(false);
-
-        for (var employee : employees) {
-
-            Mockito.when(employeeRepository.existsById(employee.getId()))
-                    .thenReturn(true);
-
-            Mockito.when(employeeRepository.findById(employee.getId()))
-                    .thenReturn(Optional.of(employee));
-        }
-
     }
 
-//    @Test
+    @Test
     void testFindAll() {
+        when(employeeRepository.findAll()).thenReturn(employees);
+        employeeService.findAll();
+        verify(employeeRepository, times(1)).findAll();
     }
 
-//    @Test
+    @Test
     void testFindById() {
+
+        var employee = employees.get(0);
+        long id = employee.getId();
+        when(employeeRepository.findById(id)).thenReturn(Optional.of(employee));
+
+        employeeService.findById(id);
+        verify(employeeRepository, times(1)).findById(id);
     }
 
-//    @Test
+    @Test
     void testCreate() {
+
+        var employee = employees.get(0);
+        when(employeeRepository.save(employee)).thenReturn(employee);
+
+        employeeService.create(employee);
+        verify(employeeRepository, times(1)).save(employee);
     }
 
-//    @Test
+    @Test
     void testUpdate() {
+
+        var employee = employees.get(0);
+        when(employeeRepository.save(employee)).thenReturn(employee);
+        when(employeeRepository.existsById(employee.getId())).thenReturn(true);
+        when(employeeRepository.existsById(-1L)).thenReturn(false);
+
+        employeeService.update(employee.getId(), employee);
+        verify(employeeRepository, times(1)).existsById(employee.getId());
+        verify(employeeRepository, times(1)).save(employee);
+
+        employeeService.update(-1L, employees.get(1));
+        verify(employeeRepository, times(1)).existsById(-1L);
+        verify(employeeRepository, never()).save(employees.get(1));
     }
 
-//    @Test
+    @Test
     void testDeleteById() {
+        employeeService.deleteById(1L);
+        verify(employeeRepository, times(1)).deleteById(anyLong());
     }
 }
