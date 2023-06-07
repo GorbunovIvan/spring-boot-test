@@ -7,6 +7,7 @@ import lombok.*;
 @Table(name = "employees")
 @NoArgsConstructor @AllArgsConstructor
 @Getter @Setter
+@EqualsAndHashCode
 @ToString
 public class Employee {
 
