@@ -17,7 +17,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.hamcrest.Matchers.*;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
-@AutoConfigureMockMvc
+// You may use either '@WebMvcTest' or '@AutoConfigureMockMvc'
+// @WebMvcTest - loads only controller and its dependencies
+@AutoConfigureMockMvc // - loads full context
 @Transactional
 class EmployeeRestControllerTest {
 
