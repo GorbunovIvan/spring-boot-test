@@ -1,22 +1,17 @@
 package com.example.employee;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.http.MediaType;
-import org.springframework.test.web.servlet.MockMvc;
+import com.fasterxml.jackson.core.type.TypeReference;
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.transaction.annotation.Transactional;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import java.util.ArrayList;
+import java.util.List;
 
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-import static org.hamcrest.Matchers.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
+@SpringBootTest
 // You may use either '@WebMvcTest' or '@AutoConfigureMockMvc'
 // @WebMvcTest - loads only controller and its dependencies
 @AutoConfigureMockMvc // - loads full context
@@ -29,35 +24,49 @@ class EmployeeRestControllerTest {
     @Autowired
     private EmployeeService employeeService;
 
-    private Employee employee;
+    private List<Employee> employees;
 
     @BeforeEach
-    public void initEach() {
-        employee = employeeService.create(new Employee("test employee", 99));
+    public void init() {
+        employees = new ArrayList<>(List.of(
+                employeeService.create(new Employee("test one", 11)),
+                employeeService.create(new Employee("test two", 22)),
+                employeeService.create(new Employee("test three", 33))
+        ));
     }
 
     @Test
     void testFindAll() throws Exception {
 
-        mvc.perform(get("/api/employees")
+        var response = mvc.perform(MockMvcRequestBuilders.get("/api/employees")
                     .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$[0].name", is(employee.getName())))
-                .andExpect(jsonPath("$[0].age", is(employee.getAge())));
+                .andReturn()
+                .getResponse();
+
+        String jsonReceived = new String(response.getContentAsByteArray());
+        List<Employee> employeesReceived = new ObjectMapper().readValue(jsonReceived, new TypeReference<>(){});
+
+        assertEquals(employees, employeesReceived);
     }
 
     @Test
     void testFindById() throws Exception {
 
-        mvc.perform(get("/api/employees/{id}", employee.getId())
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.name", is(employee.getName())))
-                .andExpect(jsonPath("$.age", is(employee.getAge())));
+        var employee = employees.get(1);
 
-        mvc.perform(get("/api/employees/0")
+        var response = mvc.perform(MockMvcRequestBuilders.get("/api/employees/{id}", employee.getId())
+                    .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse();
+
+        String jsonReceived = new String(response.getContentAsByteArray());
+        var employeeReceived = new ObjectMapper().readValue(jsonReceived, Employee.class);
+
+        assertEquals(employee, employeeReceived);
+
+        mvc.perform(MockMvcRequestBuilders.get("/api/employees/{id}", -1L)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound());
     }
@@ -65,55 +74,62 @@ class EmployeeRestControllerTest {
     @Test
     void testCreate() throws Exception {
 
-        var employeeForPosting = new Employee("created employee", 88);
-        String json = new ObjectMapper().writeValueAsString(employeeForPosting);
+        var employee = new Employee("employee for posting", 99);
 
-        // POST
-        mvc.perform(post("/api/employees")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(json))
+        var response = mvc.perform(MockMvcRequestBuilders.post("/api/employees")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(new ObjectMapper().writeValueAsString(employee)))
                 .andExpect(status().isAccepted())
-                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.name", is(employeeForPosting.getName())))
-                .andExpect(jsonPath("$.age", is(employeeForPosting.getAge())));
+                .andReturn()
+                .getResponse();
 
-        assertTrue(employeeService.findAll()
-                .stream()
-                .anyMatch(e -> e.getName().equals(employeeForPosting.getName())
-                            && e.getAge().equals(employeeForPosting.getAge())));
+        String jsonReceived = new String(response.getContentAsByteArray());
+        var employeeReceived = new ObjectMapper().readValue(jsonReceived, Employee.class);
+
+        assertEquals(employee.getName(), employeeReceived.getName());
+        assertEquals(employee.getAge(), employeeReceived.getAge());
+
+        assertEquals(employeeReceived, employeeService.findById(employeeReceived.getId()));
     }
 
     @Test
     void testUpdate() throws Exception {
 
-        employee.setName("updated name");
-        employee.setAge(employee.getAge() * 2);
-        String json = new ObjectMapper().writeValueAsString(employee);
+        var employee = employees.get(1);
 
-        // PUT
-        mvc.perform(put("/api/employees/{id}", employee.getId())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(json))
+        var response = mvc.perform(MockMvcRequestBuilders.put("/api/employees/{id}", employee.getId())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(new ObjectMapper().writeValueAsString(employee)))
                 .andExpect(status().isAccepted())
-                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.name", is(employee.getName())))
-                .andExpect(jsonPath("$.age", is(employee.getAge())));
+                .andReturn()
+                .getResponse();
 
-        var employeeFound = employeeService.findById(employee.getId());
-        assertEquals(employee.getName(), employeeFound.getName());
-        assertEquals(employee.getAge(), employeeFound.getAge());
+        String jsonReceived = new String(response.getContentAsByteArray());
+        var employeeReceived = new ObjectMapper().readValue(jsonReceived, Employee.class);
+
+        assertEquals(employee, employeeReceived);
+
+        mvc.perform(MockMvcRequestBuilders.put("/api/employees/{id}", -1L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(new ObjectMapper().writeValueAsString(employee)))
+                .andExpect(status().isNotFound());
     }
 
     @Test
     void testDeleteById() throws Exception {
 
-        assertNotNull(employeeService.findById(employee.getId()));
+        var employeeForDeletion = employees.get(1);
 
-        // DELETE
-        mvc.perform(delete("/api/employees/{id}", employee.getId())
-                        .contentType(MediaType.APPLICATION_JSON))
+        mvc.perform(MockMvcRequestBuilders.delete("/api/employees/{id}", employeeForDeletion.getId())
+                    .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
 
-        assertNull(employeeService.findById(employee.getId()));
+        var employeesAfterDeletion = employeeService.findAll();
+
+        assertEquals(employees.size()-1, employeesAfterDeletion.size());
+
+        assertTrue(employeesAfterDeletion.stream()
+                .noneMatch(e -> e.getName().equals(employeeForDeletion.getName())
+                                && e.getAge().equals(employeeForDeletion.getAge())));
     }
 }

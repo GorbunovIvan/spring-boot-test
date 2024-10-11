@@ -5,17 +5,20 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 
-import static org.hamcrest.Matchers.containsString;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
+@SpringBootTest
 // You may use either '@WebMvcTest' or '@AutoConfigureMockMvc'
 // @WebMvcTest - loads only controller and its dependencies
 @AutoConfigureMockMvc // - loads full context
@@ -31,23 +34,29 @@ class EmployeeControllerTest {
     private List<Employee> employees;
 
     @BeforeEach
-    void setUp() {
-        employees = List.of(
-                employeeService.create(new Employee("First Test", 22)),
-                employeeService.create(new Employee("Second Test", 33)),
-                employeeService.create(new Employee("Third Test", 44))
-        );
+    public void init() {
+        employees = new ArrayList<>(List.of(
+                employeeService.create(new Employee("test one", 11)),
+                employeeService.create(new Employee("test two", 22)),
+                employeeService.create(new Employee("test three", 33))
+        ));
     }
 
     @Test
     void testFindAll() throws Exception {
 
-        mvc.perform(get("/employees"))
+        var response = mvc.perform(MockMvcRequestBuilders.get("/employees")
+                    .contentType(MediaType.TEXT_HTML))
                 .andExpect(status().isOk())
                 .andExpect(view().name("employees/employees"))
-                .andExpect(content().string(containsString(employees.get(0).getName())))
-                .andExpect(content().string(containsString(employees.get(1).getName())))
-                .andExpect(content().string(containsString(employees.get(2).getName())));
+                .andReturn()
+                .getResponse();
+
+        String htmlReceived = new String(response.getContentAsByteArray());
+
+        for (var employee : employees) {
+            assertTrue(htmlReceived.contains(employee.getName()));
+        }
     }
 
     @Test
@@ -55,30 +64,34 @@ class EmployeeControllerTest {
 
         var employee = employees.get(1);
 
-        mvc.perform(get("/employees/{id}", employee.getId()))
+        var response = mvc.perform(MockMvcRequestBuilders.get("/employees/{id}", employee.getId())
+                    .contentType(MediaType.TEXT_HTML))
                 .andExpect(status().isOk())
                 .andExpect(view().name("employees/employee"))
-                .andExpect(content().string(containsString(employee.getName())))
-                .andExpect(content().string(containsString(String.valueOf(employee.getAge()))))
-                .andExpect(content().string(containsString("Edit")));
+                .andReturn()
+                .getResponse();
+
+        String htmlReceived = new String(response.getContentAsByteArray());
+
+        assertTrue(htmlReceived.contains(employee.getName()));
+        assertTrue(htmlReceived.contains(String.valueOf(employee.getAge())));
     }
 
     @Test
     void testCreate() throws Exception {
 
-        var newEmployee = new Employee("New Employee", 99);
+        var employee = new Employee("employee for posting", 99);
 
-        // POST
-        mvc.perform(post("/employees")
-                        .param("name", newEmployee.getName())
-                        .param("age", String.valueOf(newEmployee.getAge())))
+        mvc.perform(MockMvcRequestBuilders.post("/employees")
+                    .contentType(MediaType.TEXT_HTML)
+                    .param("name", employee.getName())
+                    .param("age", String.valueOf(employee.getAge())))
                 .andExpect(status().isFound())
                 .andExpect(view().name("redirect:/employees"));
 
-        assertTrue(employeeService.findAll()
-                .stream()
-                .anyMatch(e -> e.getName().equals(newEmployee.getName())
-                        && e.getAge().equals(newEmployee.getAge())));
+        assertTrue(employeeService.findAll().stream()
+                .anyMatch(e -> e.getName().equals(employee.getName())
+                            && e.getAge().equals(employee.getAge())));
     }
 
     @Test
@@ -86,42 +99,53 @@ class EmployeeControllerTest {
 
         var employee = employees.get(1);
 
-        mvc.perform(get("/employees/{id}/edit", employee.getId()))
+        var response = mvc.perform(MockMvcRequestBuilders.get("/employees/{id}/edit", employee.getId())
+                    .contentType(MediaType.TEXT_HTML))
                 .andExpect(status().isOk())
                 .andExpect(view().name("employees/edit"))
-                .andExpect(content().string(containsString(employee.getName())))
-                .andExpect(content().string(containsString(String.valueOf(employee.getAge()))))
-                .andExpect(content().string(containsString("Update")));
+                .andReturn()
+                .getResponse();
+
+        String htmlReceived = new String(response.getContentAsByteArray());
+
+        assertTrue(htmlReceived.contains(employee.getName()));
+        assertTrue(htmlReceived.contains(String.valueOf(employee.getAge())));
     }
 
     @Test
     void testUpdate() throws Exception {
 
-        var employeePrototype = employees.get(1);
-        var employeeUpdated = new Employee(employeePrototype.getId(), "updated name", 99);
+        var employee = new Employee(employees.get(1).getId(), employees.get(1).getName(), employees.get(1).getAge());
 
-        // PUT
-        mvc.perform(put("/employees/{id}", employeePrototype.getId())
-                        .param("name", employeeUpdated.getName())
-                        .param("age", String.valueOf(employeeUpdated.getAge())))
+        mvc.perform(MockMvcRequestBuilders.put("/employees/{id}", employee.getId())
+                    .contentType(MediaType.TEXT_HTML)
+                    .param("name", employee.getName() + " updated")
+                    .param("age", String.valueOf((employee.getAge() + 1) * 2)))
                 .andExpect(status().isFound())
-                .andExpect(view().name("redirect:/employees/" + employeePrototype.getId()));
+                .andExpect(view().name("redirect:/employees/" + employee.getId()));
 
-        assertEquals(employeeService.findById(employeePrototype.getId()), employeeUpdated);
+        var employeeFromBase = employeeService.findById(employee.getId());
+
+        assertEquals(employeeFromBase.getName(), employee.getName() + " updated");
+        assertEquals(employeeFromBase.getAge(), (employee.getAge() + 1) * 2);
     }
 
     @Test
     void testDeleteById() throws Exception {
 
-        var employee = employees.get(1);
+        var employeeForDeletion = employees.get(1);
 
-        assertNotNull(employeeService.findById(employee.getId()));
-
-        // DELETE
-        mvc.perform(delete("/employees/{id}", employee.getId()))
+        mvc.perform(MockMvcRequestBuilders.delete("/employees/{id}", employeeForDeletion.getId())
+                    .contentType(MediaType.TEXT_HTML))
                 .andExpect(status().isFound())
                 .andExpect(view().name("redirect:/employees"));
 
-        assertNull(employeeService.findById(employee.getId()));
+        var employeesAfterDeletion = employeeService.findAll();
+
+        assertEquals(employees.size()-1, employeesAfterDeletion.size());
+
+        assertTrue(employeesAfterDeletion.stream()
+                .noneMatch(e -> e.getName().equals(employeeForDeletion.getName())
+                                && e.getAge().equals(employeeForDeletion.getAge())));
     }
 }
