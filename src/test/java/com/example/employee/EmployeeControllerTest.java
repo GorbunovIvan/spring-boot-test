@@ -19,7 +19,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
 @SpringBootTest
-@AutoConfigureMockMvc
+// You may use either '@WebMvcTest' or '@AutoConfigureMockMvc'
+// @WebMvcTest - loads only controller and its dependencies
+@AutoConfigureMockMvc // - loads full context
 @Transactional
 class EmployeeControllerTest {
 

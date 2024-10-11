@@ -20,7 +20,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
-@AutoConfigureMockMvc
+// You may use either '@WebMvcTest' or '@AutoConfigureMockMvc'
+// @WebMvcTest - loads only controller and its dependencies
+@AutoConfigureMockMvc // - loads full context
 @Transactional
 class EmployeeRestControllerTest {
 
@@ -45,7 +47,7 @@ class EmployeeRestControllerTest {
     void testFindAll() throws Exception {
 
         var response = mvc.perform(MockMvcRequestBuilders.get("/api/employees")
-                    .contentType(MediaType.APPLICATION_JSON))
+                        .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andReturn()
                 .getResponse();
@@ -62,7 +64,7 @@ class EmployeeRestControllerTest {
         var employee = employees.get(1);
 
         var response = mvc.perform(MockMvcRequestBuilders.get("/api/employees/{id}", employee.getId())
-                    .contentType(MediaType.APPLICATION_JSON))
+                        .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andReturn()
                 .getResponse();
@@ -83,8 +85,8 @@ class EmployeeRestControllerTest {
         var employee = new Employee("employee for posting", 99);
 
         var response = mvc.perform(MockMvcRequestBuilders.post("/api/employees")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(new ObjectMapper().writeValueAsString(employee)))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(new ObjectMapper().writeValueAsString(employee)))
                 .andExpect(status().isAccepted())
                 .andReturn()
                 .getResponse();
@@ -104,8 +106,8 @@ class EmployeeRestControllerTest {
         var employee = employees.get(1);
 
         var response = mvc.perform(MockMvcRequestBuilders.put("/api/employees/{id}", employee.getId())
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(new ObjectMapper().writeValueAsString(employee)))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(new ObjectMapper().writeValueAsString(employee)))
                 .andExpect(status().isAccepted())
                 .andReturn()
                 .getResponse();
@@ -127,7 +129,7 @@ class EmployeeRestControllerTest {
         var employeeForDeletion = employees.get(1);
 
         mvc.perform(MockMvcRequestBuilders.delete("/api/employees/{id}", employeeForDeletion.getId())
-                    .contentType(MediaType.APPLICATION_JSON))
+                        .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
 
         var employeesAfterDeletion = employeeService.findAll();
@@ -136,6 +138,6 @@ class EmployeeRestControllerTest {
 
         assertTrue(employeesAfterDeletion.stream()
                 .noneMatch(e -> e.getName().equals(employeeForDeletion.getName())
-                                && e.getAge().equals(employeeForDeletion.getAge())));
+                        && e.getAge().equals(employeeForDeletion.getAge())));
     }
 }
